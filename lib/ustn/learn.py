@@ -41,10 +41,10 @@ def train_model(cfg,data_loader,denoiser,optim):
         nframes = T
         ref_t = nframes//2
 
+        print("batch_iter: ",batch_iter)
         # -- apply denoiser --
         for t in range(nframes-1):
 
-            print(t,noisy.shape)
             # -- reset gradient --
             denoiser.zero_grad()
             optim.zero_grad()
@@ -55,8 +55,10 @@ def train_model(cfg,data_loader,denoiser,optim):
             with th.no_grad():
                 deno1 = denoiser(image1).detach()
                 deno2 = denoiser(image2).detach()
-            warp2,_ = compute_warped(deno1,deno2)
-            deno1 = denoiser(image1-0.5)+0.5
+            warp2,reg2to1 = compute_warped(clean[t],clean[t+1],clean[t+1])#deno1,deno2)
+            # print(reg2to1.shape)
+            # warp2 = clean[t]
+            deno1 = denoiser(image1-0.5) + image1
             loss = th.mean((deno1 - warp2)**2)
 
             # -- backward --
@@ -64,11 +66,13 @@ def train_model(cfg,data_loader,denoiser,optim):
             optim.step()
 
             # -- log --
-            if batch_iter % cfg.train_log_interval == 0:
+            if batch_iter % cfg.train_log_interval == 0 and t == 0:
+                print("[deno] loss: ",loss.item())
                 psnrs = compute_psnrs(deno1,clean[t])
-                print("loss: ",loss.item())
-                print("psnrs: ",psnrs)
-                print("psnr: ",psnrs.mean().item())
+                print("[deno] psnr: ",psnrs)#.mean().item())
+                psnrs = compute_psnrs(noisy[t],clean[t])
+                print("[noisy] psnr: ",psnrs)#.mean().item())
+
                 # info = get_train_log_info(cfg,model,denoised,loss,dyn_noisy,
                 #                           dyn_clean,sims,masks,aligned,
                 #                           flow,flow_gt)
@@ -130,7 +134,7 @@ def test_model(cfg,test_loader,denoiser):
 
             deno = th.zeros_like(burst)
             for t in range(nframes):
-                deno[t] = denoiser(burst[t]-0.5)+0.5
+                deno[t] = denoiser(burst[t]-0.5)+burst[t]
 
             # -- rec loss --
             loss = th.mean((deno - clean)**2)

@@ -16,7 +16,7 @@ class SingleSTN(nn.Module):
         self.stype = "grid"
 
         # -- total variation --
-        self.lam_tv = 0.001
+        self.lam_tv = 0.01
 
         # -- misc --
         self.shape = shape

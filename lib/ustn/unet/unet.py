@@ -482,7 +482,7 @@ class UNet_v2(nn.Module):
         self.n_channels = n_channels
         self.verbose = verbose
 
-        self.conv1 = SingleConv(n_channels, 32, kernel_size=2,stride=2)
+        self.conv1 = SingleConv(n_channels, 32, padding=1, kernel_size=2,stride=1)
         self.conv2 = SingleConv(32, 64, 1)
         self.conv3 = SingleConv(64, 128, 1)
         self.conv4 = SingleConv(128, 256, 1)
@@ -490,14 +490,16 @@ class UNet_v2(nn.Module):
         # self.conv6 = SingleConv(256, 256, 1)
 
         # self.up1 = SingleUpConv(256,256)
-        self.up2 = SingleUpConv(256,256)
-        self.up3 = SingleUpConv(512,128)
-        self.up4 = SingleUpConv(256,64)
-        self.up5 = SingleUpConv(128,32)
-        self.up6 = SingleUpConv(64,32)
+        self.up2 = SingleUpConv(256,256,0,2,2)
+        self.up3 = SingleUpConv(512,128,0,2,2)
+        self.up4 = SingleUpConv(256,64,0,2,2)
+        self.up5 = SingleUpConv(128,32,0,2,2)
+        self.up6 = SingleUpConv(64,32,0,2,2)
 
-        self.end1 = SingleConv(32,32, 1, 3, 1)
-        self.end2 = SingleConv(32, 3, 0, 1, 1,False)
+        self.end1 = nn.Conv2d(32, 32, kernel_size=1,stride=1, padding=0)
+        self.end2 = nn.Conv2d(32, 3, kernel_size=1,stride=1, padding=0)
+        # self.end1 = SingleConv(32,32, padding=0, kernel_size=1, stride=1)
+        # self.end2 = SingleConv(32, 3, padding=0, kernel_size=1, stride=1)
 
     def forward(self, x):
         self.vprint("fwd")
@@ -514,7 +516,7 @@ class UNet_v2(nn.Module):
         self.vprint('x5',x5.shape)
         # x6 = self.conv6(x5)
         # self.vprint('x6',x6.shape)
-        
+
         # u1 = self.up1(x6)
         # self.vprint(u1.shape)
         u2 = self.up2(x5)
@@ -527,7 +529,7 @@ class UNet_v2(nn.Module):
         self.vprint('u5',u5.shape)
         u6 = self.up6(torch.cat([x1,u5],dim=1))
         self.vprint('u6',u6.shape)
-        
+
         e1 = self.end1(u6)
         self.vprint("e1",e1.shape)
 
