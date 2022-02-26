@@ -14,6 +14,7 @@ def default_config():
     cfg.random_seed = 123
     # cfg.nn_arch = "unet"
     cfg.nn_arch = "dncnn"
+    cfg.nn_init = "net_s30.pth"
     cfg.nepochs = 30
     cfg.test_interval = 3
     cfg.save_interval = 5
@@ -25,6 +26,7 @@ def default_config():
     cfg.noise_level = 30.
     cfg.frame_size = [256,256]
     cfg.scale = 0.5
+    cfg.color = False
     cfg.patchsize = 7
     cfg.cache_root = "./cache/"
     cfg.device = "cuda:0"

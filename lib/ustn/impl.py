@@ -33,14 +33,15 @@ def denoise_stn(cfg):
 
     # -- reset sys.out if subprocess --
     cproc = current_process()
-    # if not(cfg.pid == cproc.pid):
-    #     printfn = Path("./running")  / f"{os.getpid()}.txt"
-    #     orig_stdout = sys.stdout
-    #     f = open(printfn, 'w')
-    #     sys.stdout = f
+    if not(cfg.pid == cproc.pid):
+        printfn = Path("./running")  / f"{os.getpid()}.txt"
+        orig_stdout = sys.stdout
+        f = open(printfn, 'w')
+        sys.stdout = f
 
     # -- init exp! --
     print("RUNNING Exp: [UNSUP DENOISING] Compare to Competitors")
+    print("we use the noisy images to warp a noisy image here.")
     print(cfg)
     cfg.epoch = -1
     cfg.global_step = -1
@@ -58,7 +59,7 @@ def denoise_stn(cfg):
     set_seed(cfg.random_seed)
 
     # -- get neural netowrk --
-    model,optim,argdict = get_nn_model(cfg,cfg.nn_arch)
+    model,optim,argdict = get_nn_model(cfg)
 
     # -- load dataset --
     data,loaders = load_dataset(cfg)
@@ -70,7 +71,10 @@ def denoise_stn(cfg):
     #
     # -- Primary Learning Loop --
     #
+    result_te = test_model(cfg,loaders.te,model)
+    print(result_te)
 
+    # -- start test --
     start_time = time.perf_counter()
     for epoch in range(start_epoch,cfg.nepochs):
         print("-"*25)
@@ -81,6 +85,7 @@ def denoise_stn(cfg):
         append_result_to_dict(results,result_tr)
         if epoch % cfg.test_interval == 0:
             result_te = test_model(cfg,loaders.te,model)
+            print("Testing: ",result_te)
             append_result_to_dict(results,result_te)
         if epoch % cfg.save_interval == 0:
             save_model_checkpoint(cfg, model, optim, argdict, results)

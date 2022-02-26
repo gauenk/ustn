@@ -55,10 +55,13 @@ def train_model(cfg,data_loader,denoiser,optim):
             with th.no_grad():
                 deno1 = denoiser(image1).detach()
                 deno2 = denoiser(image2).detach()
-            warp2,reg2to1 = compute_warped(clean[t],clean[t+1],clean[t+1])#deno1,deno2)
+            # warp2,reg2to1 = compute_warped(clean[t],clean[t+1],clean[t+1])#deno1,deno2)
+            # warp2,reg2to1 = compute_warped(clean[t],clean[t+1],noisy[t+1])#deno1,deno2)
+            # warp2,reg2to1 = compute_warped(noisy[t],noisy[t+1],noisy[t+1])#deno1,deno2)
+            warp2,reg2to1 = compute_warped(deno1,deno2,noisy[t+1])#deno1,deno2)
             # print(reg2to1.shape)
             # warp2 = clean[t]
-            deno1 = denoiser(image1-0.5) + image1
+            deno1 = image1 - denoiser(image1-0.5)
             loss = th.mean((deno1 - warp2)**2)
 
             # -- backward --
@@ -106,7 +109,7 @@ def test_model(cfg,test_loader,denoiser):
 
     denoiser = denoiser.to(cfg.device)
     test_iter = iter(test_loader)
-    nbatches = min(500,len(test_iter))
+    nbatches = min(100,len(test_iter))
     psnrs = np.zeros( ( nbatches, cfg.batch_size ) )
     use_record = False
     te_info = []
@@ -132,18 +135,17 @@ def test_model(cfg,test_loader,denoiser):
             # -- denoise image --
             #
 
-            deno = th.zeros_like(burst)
+            deno = th.zeros_like(noisy)
             for t in range(nframes):
-                deno[t] = denoiser(burst[t]-0.5)+burst[t]
+                deno[t] = noisy[t] - denoiser(noisy[t]-0.5)
 
             # -- rec loss --
             loss = th.mean((deno - clean)**2)
             psnrs = compute_psnrs(deno,clean)
-            print("psnrs: ",psnrs)
 
             # -- log info --
             info = edict()
-            info['batch_psnrs'] = psnrs
+            info['batch_psnrs'] = psnrs.squeeze()
             info['global_iter'] = cfg.global_step
             info['batch_iter'] = batch_iter
             info['mode'] = 'test'
@@ -152,7 +154,7 @@ def test_model(cfg,test_loader,denoiser):
 
             # -- print to screen --
             if batch_iter % cfg.test_log_interval == 0:
-                psnr = info['image_psnrs'].mean().item()
+                psnr = info['batch_psnrs'].mean().item()
                 print("[%d/%d] Test PSNR: %2.2f" % (batch_iter+1,nbatches,psnr))
 
             # -- print update --
